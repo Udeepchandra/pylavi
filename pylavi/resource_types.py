@@ -196,18 +196,35 @@ class TypeLVSR(Structure):
     def shared_clone_reentrant(self, value: bool = None) -> bool:
         """Was this VI's reentrant execution set to share clones between callers
         (as opposed to preallocating a separate clone for each caller).
-        Only meaningful when reentrant() is True.
+
+        The underlying clone-sharing bit is only meaningful when reentrant()
+        is True, so when reading (value is None) this returns False for any
+        VI that isn't reentrant, even if the clone-sharing bit happens to be
+        set from a previous (now inactive) reentrant setting.
         """
-        return self.__flag_value(*TypeLVSR.SHARED_CLONE_REENTRANT, value)
+        old_value = self.__flag_value(*TypeLVSR.SHARED_CLONE_REENTRANT, value)
+
+        if value is not None:
+            return old_value
+
+        return bool(old_value) and self.reentrant()
 
     def preallocated_clone_reentrant(self, value: bool = None) -> bool:
         """Was this VI's reentrant execution set to preallocate a separate clone
         for each caller (as opposed to sharing clones between callers).
-        Only meaningful when reentrant() is True.
+
+        The underlying clone-sharing bit is only meaningful when reentrant()
+        is True, so when reading (value is None) this returns False for any
+        VI that isn't reentrant, even if the clone-sharing bit happens to be
+        clear from a previous (now inactive) reentrant setting.
         """
         new_value = None if value is None else not value
-        old_value = self.shared_clone_reentrant(new_value)
-        return None if old_value is None else not old_value
+        old_value = self.__flag_value(*TypeLVSR.SHARED_CLONE_REENTRANT, new_value)
+
+        if value is not None:
+            return None if old_value is None else not old_value
+
+        return old_value is not None and not old_value and self.reentrant()
 
     def inline(self, value: bool = None) -> bool:
         """Was this VI saved with the Inline execution setting"""

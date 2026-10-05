@@ -19,7 +19,6 @@ from pylavi.data_types import Version, Path
 
 
 MAX_FILES_TO_QUEUE = 1000
-REENTRANCY_EXTENSIONS = {".vi", ".vit", ".vim"}
 
 
 class Problem:
@@ -199,8 +198,12 @@ def patch_up_args(args):
     has_locked = args.locked > 0 or args.not_locked > 0
     has_password = args.password > 0 or args.no_password > 0
     has_debuggable = args.debuggable > 0 or args.not_debuggable > 0
-    has_reentrant = (
-        args.reentrant > 0
+    has_binary = (
+        has_code
+        or has_locked
+        or has_password
+        or has_debuggable
+        or args.reentrant > 0
         or args.not_reentrant > 0
         or args.shared_reentrant > 0
         or args.not_shared_reentrant > 0
@@ -208,9 +211,6 @@ def patch_up_args(args):
         or args.not_preallocate_reentrant > 0
         or args.inline > 0
         or args.not_inline > 0
-    )
-    has_binary = (
-        has_code or has_locked or has_password or has_debuggable or has_reentrant
     )
     has_other = (
         args.autoerror or args.breakpoints or args.password_match or args.path_length
@@ -585,9 +585,7 @@ def validate(args, resources: Resources, problems: list, next_path: str):
     if save_record_resources:
         validate_run(args, save_record, problems, next_path)
 
-    if save_record_resources and os.path.splitext(next_path)[1].lower() in (
-        REENTRANCY_EXTENSIONS
-    ):
+    if save_record_resources:
         validate_reentrancy(args, save_record, problems, next_path)
 
     if save_record_resources and password_record:

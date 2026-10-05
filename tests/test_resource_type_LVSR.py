@@ -117,7 +117,7 @@ def test_reentrancy():
 
     assert not non_reentrant.reentrant()
     assert not non_reentrant.shared_clone_reentrant()
-    assert non_reentrant.preallocated_clone_reentrant()
+    assert not non_reentrant.preallocated_clone_reentrant()
     assert not non_reentrant.inline()
 
     assert shared_reentrant.reentrant()
@@ -144,14 +144,17 @@ def test_reentrancy():
         binary = lvsr.to_bytes()
         lvsr.reentrant(True)
         assert lvsr.reentrant()
-        lvsr.reentrant(False)
-        assert not lvsr.reentrant()
         lvsr.shared_clone_reentrant(True)
         assert lvsr.shared_clone_reentrant()
         assert not lvsr.preallocated_clone_reentrant()
         lvsr.preallocated_clone_reentrant(True)
         assert lvsr.preallocated_clone_reentrant()
         assert not lvsr.shared_clone_reentrant()
+        lvsr.reentrant(False)
+        assert not lvsr.reentrant()
+        # clone type is meaningless (and reported as False) once not reentrant
+        assert not lvsr.shared_clone_reentrant()
+        assert not lvsr.preallocated_clone_reentrant()
         lvsr.inline(True)
         assert lvsr.inline()
         lvsr.inline(False)

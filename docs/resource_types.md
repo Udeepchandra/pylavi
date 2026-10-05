@@ -655,6 +655,19 @@ The known sizes are: 68, 76, 80, 82, 96, 112, 116, 120, 136, 137, 140, 144, and 
 | 00004000 | VI was marked as Run on Open                                                      |
 | 01000000 | VI is Reentrant execution (Shared or Preallocated clone, see 00000080)            |
 
+In the LabVIEW UI, reentrancy is set on the VI Properties > Execution page by
+checking **Reentrant execution** and choosing one of the two clone options:
+
+- **Shared clones** - sets bit `00000080`. Clones are drawn from a shared pool
+  and reused across callers, trading some performance for a smaller memory
+  footprint.
+- **Preallocated clones** - clears bit `00000080`. Each caller gets its own
+  dedicated copy of the VI's data space, allocated up front, trading memory
+  for faster/more predictable call performance.
+
+Both options require bit `01000000` (Reentrant execution) to also be set;
+`00000080` alone is meaningless unless `01000000` is set.
+
 #### LVSR Flags
 
 | Bit Mask | Description                        |

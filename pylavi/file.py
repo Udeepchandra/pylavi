@@ -286,19 +286,25 @@ class ResourceList(Array):
 class Resources:
     """Resources from a LabVIEW resource file"""
 
+    # NOTE: Reentrancy/inline execution (see TypeLVSR in resource_types.py) is not
+    # filtered by extension here. We don't have a verified list of exactly which of
+    # these types can carry a meaningful reentrancy setting (e.g. it's unclear
+    # whether .rtexe real-time executables retain/honor the LVSR reentrancy bits
+    # from the VIs they were built from), so validate.py checks the LVSR resource
+    # whenever it is present, regardless of file extension.
     EXTENSIONS = [
-        ".vi",
-        ".vit",
-        ".ctl",
-        ".ctt",
-        ".llb",
-        ".vim",
-        ".mnu",
-        ".uir",
-        ".lsb",
-        ".rtexe",
-        ".gbl",
-        ".glb",
+        ".vi",  # Virtual Instrument - executable, can be reentrant/inline
+        ".vit",  # VI Template - executable, can be reentrant/inline
+        ".ctl",  # Control/type definition - not executable
+        ".ctt",  # Control Type Template - not executable
+        ".llb",  # Library - a container of other resource files, not itself executable
+        ".vim",  # VI Macro (inlinable subVI) - executable, can be reentrant/inline
+        ".mnu",  # Menu - not executable
+        ".uir",  # LabWindows/CVI user interface resource - different product, not a LabVIEW VI
+        ".lsb",  # LabVIEW Source Backup - unconfirmed whether executable
+        ".rtexe",  # Real-Time executable - compiled/executable, reentrancy unconfirmed
+        ".gbl",  # Global variable - not executable
+        ".glb",  # Global variable - not executable
     ]
 
     def __init__(

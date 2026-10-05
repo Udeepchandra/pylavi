@@ -72,7 +72,7 @@ You can validate the following:
 - **debuggable** require VIs be saved with the `Allow debugging` or require they not be saved with this setting
 - **reentrant** require VIs be saved as reentrant (either shared or preallocated clone) or require they not be saved as reentrant
 - **shared/preallocate reentrant** require VIs be saved with shared clone reentrant execution or preallocated clone reentrant execution
-- **inline** require VIs be saved with the `Inline` execution setting or require they not be saved with this setting (reentrancy/inline checks only apply to `.vi`, `.vit`, and `.vim` files since other LabVIEW file types cannot be reentrant or inlined)
+- **inline** require VIs be saved with the `Inline` execution setting or require they not be saved with this setting (reentrancy/inline checks apply to any file that has LVSR save record data, not limited to a fixed set of extensions)
 - **autoerror** require VIs have the `Enable automatic error handling` flag be turned off
 - **path length** require that the path to the VI (including the `--path` length) be less than the given length
 - **absolute dependency paths** require that all paths are relative to the VI or a known LabVIEW location (ie `<vilib>`)

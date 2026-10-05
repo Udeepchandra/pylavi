@@ -206,6 +206,10 @@ def test_reentrancy():
     assert len(problems) == 1, problems
     problems = find_problems(start_finding_files(parse_config_file(parse_args(['--not-preallocate-reentrant', '-p', shared_reentrant]))), parse_args(['-v']))
     assert len(problems) == 0, problems
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['-q', '--preallocate-reentrant', '-p', non_reentrant]))), parse_args(['-v']))
+    assert len(problems) == 1, problems
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['--not-preallocate-reentrant', '-p', non_reentrant]))), parse_args(['-v']))
+    assert len(problems) == 0, problems
 
     # --inline / --not-inline
     problems = find_problems(start_finding_files(parse_config_file(parse_args(['-q', '--inline', '-p', shared_reentrant]))), parse_args(['-v']))
@@ -220,17 +224,18 @@ def test_reentrancy():
     assert len(problems) == 0, problems
 
 
-def test_reentrancy_skipped_for_non_applicable_extensions():
+def test_reentrancy_checked_regardless_of_extension():
     shared_reentrant = os.path.join('tests', 'empty_shared_reentrant.vi')
-    # .ctl/.ctt files cannot be reentrant, so reentrancy flags must not
-    # produce problems even though the underlying LVSR data says reentrant.
+    # Reentrancy is checked based solely on the presence of LVSR data, not on
+    # the file extension, since it's not confirmed which non-.vi extensions
+    # may also carry meaningful reentrancy settings (e.g. .rtexe).
     as_ctl = os.path.join('tests', 'empty_shared_reentrant_as_ctl.ctl')
     shutil.copy(shared_reentrant, as_ctl)
 
     try:
         problems = find_problems(start_finding_files(parse_config_file(parse_args(['--not-reentrant', '-p', as_ctl]))), parse_args(['-v']))
-        assert len(problems) == 0, problems
-        problems = find_problems(start_finding_files(parse_config_file(parse_args(['--not-inline', '-p', as_ctl]))), parse_args(['-v']))
+        assert len(problems) == 1, problems
+        problems = find_problems(start_finding_files(parse_config_file(parse_args(['--reentrant', '-p', as_ctl]))), parse_args(['-v']))
         assert len(problems) == 0, problems
     finally:
         os.remove(as_ctl)
