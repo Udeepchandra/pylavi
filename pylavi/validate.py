@@ -122,9 +122,7 @@ def add_flag_options(parser):
     parser.add_argument("--debuggable", action="count", help="VI is debuggable")
     parser.add_argument("--not-debuggable", action="count", help="VI is not debuggable")
     parser.add_argument("--reentrant", action="count", help="VI is reentrant")
-    parser.add_argument(
-        "--not-reentrant", action="count", help="VI is not reentrant"
-    )
+    parser.add_argument("--not-reentrant", action="count", help="VI is not reentrant")
     parser.add_argument(
         "--shared-reentrant",
         action="count",
@@ -146,9 +144,7 @@ def add_flag_options(parser):
         help="VI reentrant execution is not set to preallocate a clone for each caller",
     )
     parser.add_argument("--inline", action="count", help="VI is set to inline")
-    parser.add_argument(
-        "--not-inline", action="count", help="VI is not set to inline"
-    )
+    parser.add_argument("--not-inline", action="count", help="VI is not set to inline")
     parser.add_argument(
         "--no-absolute-path",
         action="store_true",
@@ -213,7 +209,9 @@ def patch_up_args(args):
         or args.inline > 0
         or args.not_inline > 0
     )
-    has_binary = has_code or has_locked or has_password or has_debuggable or has_reentrant
+    has_binary = (
+        has_code or has_locked or has_password or has_debuggable or has_reentrant
+    )
     has_other = (
         args.autoerror or args.breakpoints or args.password_match or args.path_length
     )
