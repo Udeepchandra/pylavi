@@ -19,6 +19,7 @@ from pylavi.data_types import Version, Path
 
 
 MAX_FILES_TO_QUEUE = 1000
+REENTRANCY_EXTENSIONS = {".vi", ".vit", ".vim"}
 
 
 class Problem:
@@ -120,6 +121,34 @@ def add_flag_options(parser):
     )
     parser.add_argument("--debuggable", action="count", help="VI is debuggable")
     parser.add_argument("--not-debuggable", action="count", help="VI is not debuggable")
+    parser.add_argument("--reentrant", action="count", help="VI is reentrant")
+    parser.add_argument(
+        "--not-reentrant", action="count", help="VI is not reentrant"
+    )
+    parser.add_argument(
+        "--shared-reentrant",
+        action="count",
+        help="VI reentrant execution is set to share clones between callers",
+    )
+    parser.add_argument(
+        "--not-shared-reentrant",
+        action="count",
+        help="VI reentrant execution is not set to share clones between callers",
+    )
+    parser.add_argument(
+        "--preallocate-reentrant",
+        action="count",
+        help="VI reentrant execution is set to preallocate a clone for each caller",
+    )
+    parser.add_argument(
+        "--not-preallocate-reentrant",
+        action="count",
+        help="VI reentrant execution is not set to preallocate a clone for each caller",
+    )
+    parser.add_argument("--inline", action="count", help="VI is set to inline")
+    parser.add_argument(
+        "--not-inline", action="count", help="VI is not set to inline"
+    )
     parser.add_argument(
         "--no-absolute-path",
         action="store_true",
@@ -154,6 +183,14 @@ def patch_up_args(args):
     args.run_on_open = args.run_on_open or 0
     args.no_suspend_on_run = args.no_suspend_on_run or 0
     args.suspend_on_run = args.suspend_on_run or 0
+    args.reentrant = args.reentrant or 0
+    args.not_reentrant = args.not_reentrant or 0
+    args.shared_reentrant = args.shared_reentrant or 0
+    args.not_shared_reentrant = args.not_shared_reentrant or 0
+    args.preallocate_reentrant = args.preallocate_reentrant or 0
+    args.not_preallocate_reentrant = args.not_preallocate_reentrant or 0
+    args.inline = args.inline or 0
+    args.not_inline = args.not_inline or 0
     has_comparison = args.lt or args.gt or args.eq
     has_phase = (
         args.no_release
@@ -166,7 +203,17 @@ def patch_up_args(args):
     has_locked = args.locked > 0 or args.not_locked > 0
     has_password = args.password > 0 or args.no_password > 0
     has_debuggable = args.debuggable > 0 or args.not_debuggable > 0
-    has_binary = has_code or has_locked or has_password or has_debuggable
+    has_reentrant = (
+        args.reentrant > 0
+        or args.not_reentrant > 0
+        or args.shared_reentrant > 0
+        or args.not_shared_reentrant > 0
+        or args.preallocate_reentrant > 0
+        or args.not_preallocate_reentrant > 0
+        or args.inline > 0
+        or args.not_inline > 0
+    )
+    has_binary = has_code or has_locked or has_password or has_debuggable or has_reentrant
     has_other = (
         args.autoerror or args.breakpoints or args.password_match or args.path_length
     )
@@ -313,6 +360,46 @@ def validate_run(args, save_record: TypeLVSR, problems: list, next_path: str):
         and save_record.suspend_on_run()
     ):
         problems.append(Problem(next_path, "Suspend on run is on"))
+
+
+def validate_reentrancy(args, save_record: TypeLVSR, problems: list, next_path: str):
+    """validate reentrancy flags"""
+
+    if args.reentrant - args.not_reentrant > 0 and not save_record.reentrant():
+        problems.append(Problem(next_path, "Not reentrant"))
+
+    if args.reentrant - args.not_reentrant < 0 and save_record.reentrant():
+        problems.append(Problem(next_path, "Reentrant"))
+
+    if (
+        args.shared_reentrant - args.not_shared_reentrant > 0
+        and not save_record.shared_clone_reentrant()
+    ):
+        problems.append(Problem(next_path, "Not shared clone reentrant"))
+
+    if (
+        args.shared_reentrant - args.not_shared_reentrant < 0
+        and save_record.shared_clone_reentrant()
+    ):
+        problems.append(Problem(next_path, "Shared clone reentrant"))
+
+    if (
+        args.preallocate_reentrant - args.not_preallocate_reentrant > 0
+        and not save_record.preallocated_clone_reentrant()
+    ):
+        problems.append(Problem(next_path, "Not preallocated clone reentrant"))
+
+    if (
+        args.preallocate_reentrant - args.not_preallocate_reentrant < 0
+        and save_record.preallocated_clone_reentrant()
+    ):
+        problems.append(Problem(next_path, "Preallocated clone reentrant"))
+
+    if args.inline - args.not_inline > 0 and not save_record.inline():
+        problems.append(Problem(next_path, "Not inline"))
+
+    if args.inline - args.not_inline < 0 and save_record.inline():
+        problems.append(Problem(next_path, "Inline"))
 
 
 def validate_code(args, save_record: TypeLVSR, problems: list, next_path: str):
@@ -499,6 +586,11 @@ def validate(args, resources: Resources, problems: list, next_path: str):
 
     if save_record_resources:
         validate_run(args, save_record, problems, next_path)
+
+    if save_record_resources and os.path.splitext(next_path)[1].lower() in (
+        REENTRANCY_EXTENSIONS
+    ):
+        validate_reentrancy(args, save_record, problems, next_path)
 
     if save_record_resources and password_record:
         validate_locked_password(

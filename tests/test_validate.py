@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import shutil
 
 from pylavi.validate import parse_args, main, start_finding_files, find_problems
 from pylavi.validate import parse_config_file
@@ -163,7 +164,76 @@ def test_run():
     assert len(problems) == 1, problems
     problems = find_problems(start_finding_files(parse_config_file(parse_args(['-q', '--locked', '--no-code', '-p', os.path.join('tests', 'empty.vi')]))), parse_args(['-v']))
     assert len(problems) == 2, problems
-    print(problems)
+
+
+def test_reentrancy():
+    non_reentrant = os.path.join('tests', 'empty_non_reentrant.vi')
+    shared_reentrant = os.path.join('tests', 'empty_shared_reentrant.vi')
+    preallocate_reentrant = os.path.join('tests', 'empty_preallocate_reentrant.vi')
+    inline_shared = os.path.join('tests', 'empty_inline_shared_reentrant.vi')
+    inline_preallocate = os.path.join('tests', 'empty_inline_preallocate_reentrant.vi')
+
+    # --reentrant / --not-reentrant
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['-q', '--reentrant', '-p', non_reentrant]))), parse_args(['-v']))
+    assert len(problems) == 1, problems
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['--not-reentrant', '-p', non_reentrant]))), parse_args(['-v']))
+    assert len(problems) == 0, problems
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['--reentrant', '-p', shared_reentrant]))), parse_args(['-v']))
+    assert len(problems) == 0, problems
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['-q', '--not-reentrant', '-p', shared_reentrant]))), parse_args(['-v']))
+    assert len(problems) == 1, problems
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['--reentrant', '-p', preallocate_reentrant]))), parse_args(['-v']))
+    assert len(problems) == 0, problems
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['-q', '--not-reentrant', '-p', preallocate_reentrant]))), parse_args(['-v']))
+    assert len(problems) == 1, problems
+
+    # --shared-reentrant / --not-shared-reentrant
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['--shared-reentrant', '-p', shared_reentrant]))), parse_args(['-v']))
+    assert len(problems) == 0, problems
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['-q', '--not-shared-reentrant', '-p', shared_reentrant]))), parse_args(['-v']))
+    assert len(problems) == 1, problems
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['-q', '--shared-reentrant', '-p', preallocate_reentrant]))), parse_args(['-v']))
+    assert len(problems) == 1, problems
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['--not-shared-reentrant', '-p', preallocate_reentrant]))), parse_args(['-v']))
+    assert len(problems) == 0, problems
+
+    # --preallocate-reentrant / --not-preallocate-reentrant
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['--preallocate-reentrant', '-p', preallocate_reentrant]))), parse_args(['-v']))
+    assert len(problems) == 0, problems
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['-q', '--not-preallocate-reentrant', '-p', preallocate_reentrant]))), parse_args(['-v']))
+    assert len(problems) == 1, problems
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['-q', '--preallocate-reentrant', '-p', shared_reentrant]))), parse_args(['-v']))
+    assert len(problems) == 1, problems
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['--not-preallocate-reentrant', '-p', shared_reentrant]))), parse_args(['-v']))
+    assert len(problems) == 0, problems
+
+    # --inline / --not-inline
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['-q', '--inline', '-p', shared_reentrant]))), parse_args(['-v']))
+    assert len(problems) == 1, problems
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['--not-inline', '-p', shared_reentrant]))), parse_args(['-v']))
+    assert len(problems) == 0, problems
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['--inline', '-p', inline_shared]))), parse_args(['-v']))
+    assert len(problems) == 0, problems
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['-q', '--not-inline', '-p', inline_shared]))), parse_args(['-v']))
+    assert len(problems) == 1, problems
+    problems = find_problems(start_finding_files(parse_config_file(parse_args(['--inline', '--preallocate-reentrant', '-p', inline_preallocate]))), parse_args(['-v']))
+    assert len(problems) == 0, problems
+
+
+def test_reentrancy_skipped_for_non_applicable_extensions():
+    shared_reentrant = os.path.join('tests', 'empty_shared_reentrant.vi')
+    # .ctl/.ctt files cannot be reentrant, so reentrancy flags must not
+    # produce problems even though the underlying LVSR data says reentrant.
+    as_ctl = os.path.join('tests', 'empty_shared_reentrant_as_ctl.ctl')
+    shutil.copy(shared_reentrant, as_ctl)
+
+    try:
+        problems = find_problems(start_finding_files(parse_config_file(parse_args(['--not-reentrant', '-p', as_ctl]))), parse_args(['-v']))
+        assert len(problems) == 0, problems
+        problems = find_problems(start_finding_files(parse_config_file(parse_args(['--not-inline', '-p', as_ctl]))), parse_args(['-v']))
+        assert len(problems) == 0, problems
+    finally:
+        os.remove(as_ctl)
 
 
 EXPECTED_FILES = {

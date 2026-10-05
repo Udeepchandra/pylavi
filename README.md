@@ -70,6 +70,9 @@ You can validate the following:
 - **run on open** require VIs be saved with the `Run when opened` or require they not be saved with this setting
 - **suspend on run** require VIs be saved with the `Suspend when called` or require they not be saved with this setting
 - **debuggable** require VIs be saved with the `Allow debugging` or require they not be saved with this setting
+- **reentrant** require VIs be saved as reentrant (either shared or preallocated clone) or require they not be saved as reentrant
+- **shared/preallocate reentrant** require VIs be saved with shared clone reentrant execution or preallocated clone reentrant execution
+- **inline** require VIs be saved with the `Inline` execution setting or require they not be saved with this setting (reentrancy/inline checks only apply to `.vi`, `.vit`, and `.vim` files since other LabVIEW file types cannot be reentrant or inlined)
 - **autoerror** require VIs have the `Enable automatic error handling` flag be turned off
 - **path length** require that the path to the VI (including the `--path` length) be less than the given length
 - **absolute dependency paths** require that all paths are relative to the VI or a known LabVIEW location (ie `<vilib>`)
@@ -99,6 +102,9 @@ public api:
     no_run_on_open: true
     no_suspend_on_run: true
     not_debuggable: true
+    not_reentrant: true
+    not_shared_reentrant: true
+    not_inline: true
     no_absolute_path: true
     autoerror: true
     path_length: 128
@@ -125,6 +131,8 @@ All enable flags are set to `true` to enable.
 usage: vi_validate [-h] [-l LT] [-g GT] [-e EQ] [-r] [-b] [-a] [-d] [-i] [-c] [--code] [--breakpoints] [--locked] [--not-locked]
                    [--password-match PASSWORD_MATCH] [--password] [--no-password] [--clear-indicators] [--no-clear-indicators]
                    [--run-on-open] [--no-run-on-open] [--suspend-on-run] [--no-suspend-on-run] [--debuggable] [--not-debuggable]
+                   [--reentrant] [--not-reentrant] [--shared-reentrant] [--not-shared-reentrant]
+                   [--preallocate-reentrant] [--not-preallocate-reentrant] [--inline] [--not-inline]
                    [--no-absolute-path] [--autoerror] [--path-length PATH_LENGTH] [-p PATH] [-s SKIP] [-x EXTENSION] [-q] [-v]
                    [--config CONFIG]
 
@@ -158,6 +166,17 @@ optional arguments:
   --no-suspend-on-run   VI will not suspend on run
   --debuggable          VI is debuggable
   --not-debuggable      VI is not debuggable
+  --reentrant           VI is reentrant
+  --not-reentrant       VI is not reentrant
+  --shared-reentrant    VI reentrant execution is set to share clones between callers
+  --not-shared-reentrant
+                        VI reentrant execution is not set to share clones between callers
+  --preallocate-reentrant
+                        VI reentrant execution is set to preallocate a clone for each caller
+  --not-preallocate-reentrant
+                        VI reentrant execution is not set to preallocate a clone for each caller
+  --inline              VI is set to inline
+  --not-inline          VI is not set to inline
   --no-absolute-path    Does not reference links by absolute path
   --autoerror           Not saved with auto error handling turned on
   --path-length PATH_LENGTH
