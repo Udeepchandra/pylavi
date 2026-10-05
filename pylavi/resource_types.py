@@ -106,6 +106,9 @@ class TypeLVSR(Structure):
     AUTO_ERROR_HANDLING = (1, 0x20000000)
     BREAKPOINTS_SET = (5, 0x20000000)
     DEBUGGABLE = (5, 0x40000200)
+    REENTRANT = (0, 0x01000000)
+    SHARED_CLONE_REENTRANT = (0, 0x00000080)
+    INLINE = (1, 0x00020000)
     BREAKPOINT_COUNT_INDEX = 28
 
     def __init__(self):
@@ -185,6 +188,30 @@ class TypeLVSR(Structure):
     def separate_code(self, value: bool = None) -> bool:
         """Was this VI saved with code separate"""
         return self.__flag_value(*TypeLVSR.SEPARATE_CODE, value)
+
+    def reentrant(self, value: bool = None) -> bool:
+        """Was this VI saved as reentrant (shared clone or preallocated clone)"""
+        return self.__flag_value(*TypeLVSR.REENTRANT, value)
+
+    def shared_clone_reentrant(self, value: bool = None) -> bool:
+        """Was this VI's reentrant execution set to share clones between callers
+        (as opposed to preallocating a separate clone for each caller).
+        Only meaningful when reentrant() is True.
+        """
+        return self.__flag_value(*TypeLVSR.SHARED_CLONE_REENTRANT, value)
+
+    def preallocated_clone_reentrant(self, value: bool = None) -> bool:
+        """Was this VI's reentrant execution set to preallocate a separate clone
+        for each caller (as opposed to sharing clones between callers).
+        Only meaningful when reentrant() is True.
+        """
+        new_value = None if value is None else not value
+        old_value = self.shared_clone_reentrant(new_value)
+        return None if old_value is None else not old_value
+
+    def inline(self, value: bool = None) -> bool:
+        """Was this VI saved with the Inline execution setting"""
+        return self.__flag_value(*TypeLVSR.INLINE, value)
 
     # pylint: disable=attribute-defined-outside-init
     def from_bytes(self, data: bytes, offset: int = 0):

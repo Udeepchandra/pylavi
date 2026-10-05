@@ -649,9 +649,11 @@ The known sizes are: 68, 76, 80, 82, 96, 112, 116, 120, 136, 137, 140, 144, and 
 
 | Bit Mask | Description                                                                       |
 |----------|-----------------------------------------------------------------------------------|
+| 00000080 | Reentrant execution clone sharing: set = Shared clones, clear = Preallocated clones (only meaningful when 01000000 is set) |
 | 00001000 | VI was marked as Suspend when called                                              |
 | 00002000 | VI is locked (possibly with password, see [BDPW](#bdpw---block-diagram-password)) |
 | 00004000 | VI was marked as Run on Open                                                      |
+| 01000000 | VI is Reentrant execution (Shared or Preallocated clone, see 00000080)            |
 
 #### LVSR Flags
 
@@ -659,6 +661,7 @@ The known sizes are: 68, 76, 80, 82, 96, 112, 116, 120, 136, 137, 140, 144, and 
 |----------|------------------------------------|
 | 00000004 | Saved for previous                 |
 | 00000400 | Separate compiled code from source |
+| 00020000 | Inline execution                   |
 | 01000000 | Clear indicators when called       |
 | 20000000 | Automatic Error Handling           |
 

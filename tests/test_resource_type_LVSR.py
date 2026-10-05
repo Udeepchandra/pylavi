@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
+import os
 
+from pylavi.file import Resources
 from pylavi.resource_types import TypeLVSR
 
 
@@ -97,6 +99,64 @@ TEST_CASES = {
     b"#\x00\x80\x00@\x00\x00\x00\x00\x00\x06\x00\x00\x00\x00\x04\x00\x03\x00<\x00\x00\x00\x1f@\x80\x02\x00\x00\x00\x00\x01\x00\x01\x00\x02\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00*{\x93\xc2(\xa4RE\xa7\x98\xd7*\xa0\t\xa1'\x00\x00\x00\x0c\x00\x00\x00\x10\x00\x00\x00\x00&\xc03C\xc7_\xafF\x81,D{\xd6\xe9X\x89\xd4\x1d\x8c\xd9\x8f\x00\xb2\x04\xe9\x80\t\x98\xec\xf8B~\x00\x00\x00\x00\x00\x00\x00\x00\xc9M!\x849\xab=M\x92\xfc+\x03\x17\xc1O\xfd\x00\x00\x00\x00\xff\xff\xff\xff\xd4\x1d\x8c\xd9\x8f\x00\xb2\x04\xe9\x80\t\x98\xec\xf8B~": {'version': '23', 'previous': False, 'no_code': True, 'extra_size': 92},
     b"\t\x00\x80\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x04\x00\x03\x00<\x00\x00\x00\x1f\x00\x80\x00\x10\x00\x00\x00\x01\x00\x01\x00\x02\xff\xff\xff\xffCTWSWSIN\x00\x00\x01\xb8\xecp'\xb2\xce~\x14M\xaa\xd4M)l\xba@\x1f\x00\x00\x00\x0c\x00\x00\x00\x10\x00\x00\x00\x01\xe0&U9\xc7F0I\x8b\x94\xff\xa6J\x00\xc9e\xd4\x1d\x8c\xd9\x8f\x00\xb2\x04\xe9\x80\t\x98\xec\xf8B~\x00\x00@\x00\x00\x00\x00\x00": {'version': '9', 'previous': False, 'no_code': False, 'extra_size': 52, 'debuggable': False},
 }
+
+
+def __lvsr_from_vi(name: str) -> TypeLVSR:
+    path = os.path.join(os.path.dirname(__file__), name)
+    resources = Resources.load(path)
+    data = resources.get_resource("LVSR", resource_id=resources.get_ids("LVSR")[0])
+    return TypeLVSR().from_bytes(data)
+
+
+def test_reentrancy():
+    non_reentrant = __lvsr_from_vi("empty_non_reentrant.vi")
+    shared_reentrant = __lvsr_from_vi("empty_shared_reentrant.vi")
+    preallocate_reentrant = __lvsr_from_vi("empty_preallocate_reentrant.vi")
+    inline_shared = __lvsr_from_vi("empty_inline_shared_reentrant.vi")
+    inline_preallocate = __lvsr_from_vi("empty_inline_preallocate_reentrant.vi")
+
+    assert not non_reentrant.reentrant()
+    assert not non_reentrant.shared_clone_reentrant()
+    assert non_reentrant.preallocated_clone_reentrant()
+    assert not non_reentrant.inline()
+
+    assert shared_reentrant.reentrant()
+    assert shared_reentrant.shared_clone_reentrant()
+    assert not shared_reentrant.preallocated_clone_reentrant()
+    assert not shared_reentrant.inline()
+
+    assert preallocate_reentrant.reentrant()
+    assert not preallocate_reentrant.shared_clone_reentrant()
+    assert preallocate_reentrant.preallocated_clone_reentrant()
+    assert not preallocate_reentrant.inline()
+
+    assert inline_shared.reentrant()
+    assert inline_shared.shared_clone_reentrant()
+    assert not inline_shared.preallocated_clone_reentrant()
+    assert inline_shared.inline()
+
+    assert inline_preallocate.reentrant()
+    assert not inline_preallocate.shared_clone_reentrant()
+    assert inline_preallocate.preallocated_clone_reentrant()
+    assert inline_preallocate.inline()
+
+    for lvsr in (non_reentrant, shared_reentrant, preallocate_reentrant):
+        binary = lvsr.to_bytes()
+        lvsr.reentrant(True)
+        assert lvsr.reentrant()
+        lvsr.reentrant(False)
+        assert not lvsr.reentrant()
+        lvsr.shared_clone_reentrant(True)
+        assert lvsr.shared_clone_reentrant()
+        assert not lvsr.preallocated_clone_reentrant()
+        lvsr.preallocated_clone_reentrant(True)
+        assert lvsr.preallocated_clone_reentrant()
+        assert not lvsr.shared_clone_reentrant()
+        lvsr.inline(True)
+        assert lvsr.inline()
+        lvsr.inline(False)
+        assert not lvsr.inline()
+        assert lvsr.from_bytes(binary).to_bytes() == binary
 
 if __name__ == "__main__":
     test_basics()
